@@ -7,6 +7,7 @@ import json
 import re
 import os
 import io
+from pydub import AudioSegment
 from google.generativeai.types.generation_types import StopCandidateException
 import whisper
 import google.generativeai as genai
@@ -75,21 +76,26 @@ def find_similar_embeddings(db: Session, img_embedding, vce_embedding):
     
     except Exception as e:
         logger.error(f"Error in finding the similarity of embeddings{e}")
-    
+
+def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
+    audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
+    mp3_io = io.BytesIO()
+    audio.export(mp3_io, format="mp3")
+    mp3_io.seek(0)
+    return mp3_io.read()
+
 @router.post('/verify')
-async def verify_user(request: Request,file: UploadFile = File(...), db: Session = Depends(get_db)):
-    file_name=file.filename
-    file_ext=file_name.split('.')[-1].lower()
-    
+async def verify_user(request: Request,face_image: UploadFile = File(...), voice_audio: UploadFile = File(...), db: Session = Depends(get_db)):
     #function to retrieve image embedding
     async def image():
+        logger.info("Received image file for verification")
         try:
-            image_bytes=file.read()
-            global image_embedding
+            image_bytes=await face_image.read()
             face_object= FaceRecognition()
-            image_embedding= face_object.recognize_face(io.BytesIO(image_bytes))
-            logger.info(f"Extracted Image vector successfully: {image_embedding}")
-                            
+            pic_embedding= face_object.recognize_face(io.BytesIO(image_bytes))
+            logger.info(f"Extracted Image vector successfully: {pic_embedding}")
+            return pic_embedding
+        
         except Exception as e:
             logger.error(f"Error in extracting the image embedding or similarity search in DB {e}")
             raise
@@ -98,24 +104,21 @@ async def verify_user(request: Request,file: UploadFile = File(...), db: Session
     async def voice():
         logger.info("Received voice file for verification")
         try:
-            file_bytes = await file.read()
-            global voice_embedding
-            voice_embedding = extract_voice_features(io.BytesIO(file_bytes))
-            logger.info(f"Extracted voice vector: {voice_embedding}")
-            
+            file_bytes = await voice_audio.read()
+            mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+            sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
+            logger.info(f"Extracted voice vector: {sound_embedding}")
+            return sound_embedding
+
         except Exception as e:
             logger.error(f"Error extracting voice vector: {e}")
             raise HTTPException(status_code=500, detail="Error extracting voice vector")
 
         
-    #condition to divide the image and voice file
-    if file_ext in ['jpg','png','jpeg']:
-        image()
-    elif file_ext in ['wav','mp3','aiff']:
-        voice()
-    else :
-        raise HTTPException(status_code=404, detail="Unsupported File Type")
     
+    image_embedding= await image()
+    voice_embedding=await voice()
+   
     
     #Handling the result got from the similarity search
     search_result= find_similar_embeddings(db,image_embedding,voice_embedding)
@@ -133,6 +136,7 @@ async def verify_user(request: Request,file: UploadFile = File(...), db: Session
         'contact': search_result[4]
         }       
         
+        request.session['user_id']=user_dict['user_id']
         request.session['verified_user_details']= user_dict
 
         #User Found and Getting response from Gemini
@@ -215,7 +219,9 @@ chat = model.start_chat(
 user_states = {}
 
 @router.post("/register")
-async def register_user(request: Request, db: Session = Depends(get_db),voice_file: UploadFile = File(...)):
+async def register_user(request: Request, 
+    db: Session = Depends(get_db),
+    voice_file: UploadFile = File(...)):
     try:
         # Step 1: Process the audio file
         file_bytes = await voice_file.read()
@@ -251,9 +257,10 @@ async def register_user(request: Request, db: Session = Depends(get_db),voice_fi
                     )
                     db.add(new_user)
                     db.commit()
+                    logger.info(f"New User id {new_user.user_id} ")
                     request.session['user_id'] = new_user.user_id
-                    request.session["registered_user_details"] = new_user
-                    return {"message": "User registered successfully", "user_id": new_user.user_id , "details":new_user}
+                    request.session["registered_user_details"] = user_details
+                    return {"message": "User registered successfully", "user_id": new_user.user_id , "details":user_details}
                     
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON: {e}")
