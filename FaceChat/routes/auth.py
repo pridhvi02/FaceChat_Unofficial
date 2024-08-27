@@ -83,14 +83,13 @@ async def verify_user(request: Request,file: UploadFile = File(...), db: Session
     
     #function to retrieve image embedding
     async def image():
-        logger.info("Received image file for verification")
         try:
-            image_bytes=await file.read()
+            image_bytes=file.read()
+            global image_embedding
             face_object= FaceRecognition()
-            pic_embedding= face_object.recognize_face(io.BytesIO(image_bytes))
-            logger.info(f"Extracted Image vector successfully: {pic_embedding}")
-            return pic_embedding
-        
+            image_embedding= face_object.recognize_face(io.BytesIO(image_bytes))
+            logger.info(f"Extracted Image vector successfully: {image_embedding}")
+                            
         except Exception as e:
             logger.error(f"Error in extracting the image embedding or similarity search in DB {e}")
             raise
@@ -100,10 +99,10 @@ async def verify_user(request: Request,file: UploadFile = File(...), db: Session
         logger.info("Received voice file for verification")
         try:
             file_bytes = await file.read()
-            sound_embedding = extract_voice_features(io.BytesIO(file_bytes))
-            logger.info(f"Extracted voice vector: {sound_embedding}")
-            return sound_embedding
-
+            global voice_embedding
+            voice_embedding = extract_voice_features(io.BytesIO(file_bytes))
+            logger.info(f"Extracted voice vector: {voice_embedding}")
+            
         except Exception as e:
             logger.error(f"Error extracting voice vector: {e}")
             raise HTTPException(status_code=500, detail="Error extracting voice vector")
@@ -111,11 +110,9 @@ async def verify_user(request: Request,file: UploadFile = File(...), db: Session
         
     #condition to divide the image and voice file
     if file_ext in ['jpg','png','jpeg']:
-        global image_embedding
-        image_embedding= await image()
+        image()
     elif file_ext in ['wav','mp3','aiff']:
-        global voice_embedding
-        voice_embedding=await voice()
+        voice()
     else :
         raise HTTPException(status_code=404, detail="Unsupported File Type")
     
@@ -136,7 +133,6 @@ async def verify_user(request: Request,file: UploadFile = File(...), db: Session
         'contact': search_result[4]
         }       
         
-        request.session['user_id']=user_dict['user_id']
         request.session['verified_user_details']= user_dict
 
         #User Found and Getting response from Gemini
@@ -219,9 +215,7 @@ chat = model.start_chat(
 user_states = {}
 
 @router.post("/register")
-async def register_user(request: Request, 
-    db: Session = Depends(get_db),
-    voice_file: UploadFile = File(...)):
+async def register_user(request: Request, db: Session = Depends(get_db),voice_file: UploadFile = File(...)):
     try:
         # Step 1: Process the audio file
         file_bytes = await voice_file.read()
@@ -257,10 +251,9 @@ async def register_user(request: Request,
                     )
                     db.add(new_user)
                     db.commit()
-                    logger.info(f"New User id {new_user.user_id} ")
                     request.session['user_id'] = new_user.user_id
-                    request.session["registered_user_details"] = user_details
-                    return {"message": "User registered successfully", "user_id": new_user.user_id , "details":user_details}
+                    request.session["registered_user_details"] = new_user
+                    return {"message": "User registered successfully", "user_id": new_user.user_id , "details":new_user}
                     
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON: {e}")
