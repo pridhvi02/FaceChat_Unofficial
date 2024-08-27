@@ -16,7 +16,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_google_vertexai import ChatVertexAI
 import vertexai
-from pydub import AudioSegment
+
 
 router = APIRouter()
 
@@ -54,7 +54,7 @@ google_credential_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS_PATH")
 vertexai.init(project=project_key)
 os.environ['GOOGLE_APPLICATION_CREDENTIALS']=google_credential_path
 
-llm_model=ChatVertexAI(model='gemini-1.5-pro')
+llm_model=ChatVertexAI(model='gemini-1.5-flash')
 
 prompt_template=ChatPromptTemplate(
     [('system',system_template),('user',user_template)]
@@ -105,12 +105,12 @@ def update_user_conversations(db: Session, user_id: int, new_conversations: str,
         logger.error(f"Error updating user conversations and embeddings: {e}")
         return None
 
-def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
-    audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
-    mp3_io = io.BytesIO()
-    audio.export(mp3_io, format="mp3")
-    mp3_io.seek(0)
-    return mp3_io.read()
+# def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
+#     audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
+#     mp3_io = io.BytesIO()
+#     audio.export(mp3_io, format="mp3")
+#     mp3_io.seek(0)
+#     return mp3_io.read()
 
  #creating conversation embeddings and pushing to database, along with normal conv text
 def text_embeddings(db: Session,user_id,user_response,llm_response):
@@ -200,8 +200,7 @@ async def handle_conversation(request: Request,audio_file: UploadFile = File(...
     #voice processing with whisper, converted to text
     try:
         file_bytes = await audio_file.read()
-        mp3_file_bytes = convert_webm_to_mp3(file_bytes)
-        audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
+        audio_np, _ = librosa.load(io.BytesIO(file_bytes), sr=16000)
         audio_transcription = whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]
         logger.info(f"Transcribed user message: {user_message}")
