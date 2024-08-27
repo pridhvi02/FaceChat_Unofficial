@@ -215,9 +215,7 @@ chat = model.start_chat(
 user_states = {}
 
 @router.post("/register")
-async def register_user(request: Request, 
-    db: Session = Depends(get_db),
-    voice_file: UploadFile = File(...)):
+async def register_user(request: Request, db: Session = Depends(get_db),voice_file: UploadFile = File(...)):
     try:
         # Step 1: Process the audio file
         file_bytes = await voice_file.read()
