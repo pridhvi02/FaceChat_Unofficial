@@ -7,6 +7,7 @@ import whisper
 import io
 import os
 import math
+from pydub import AudioSegment
 import librosa
 from sentence_transformers import SentenceTransformer
 from dotenv import load_dotenv
@@ -105,12 +106,12 @@ def update_user_conversations(db: Session, user_id: int, new_conversations: str,
         logger.error(f"Error updating user conversations and embeddings: {e}")
         return None
 
-# def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
-#     audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
-#     mp3_io = io.BytesIO()
-#     audio.export(mp3_io, format="mp3")
-#     mp3_io.seek(0)
-#     return mp3_io.read()
+def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
+    audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
+    mp3_io = io.BytesIO()
+    audio.export(mp3_io, format="mp3")
+    mp3_io.seek(0)
+    return mp3_io.read()
 
  #creating conversation embeddings and pushing to database, along with normal conv text
 def text_embeddings(db: Session,user_id,user_response,llm_response):
@@ -200,7 +201,8 @@ async def handle_conversation(request: Request,audio_file: UploadFile = File(...
     #voice processing with whisper, converted to text
     try:
         file_bytes = await audio_file.read()
-        audio_np, _ = librosa.load(io.BytesIO(file_bytes), sr=16000)
+        mp3_file_bytes=convert_webm_to_mp3(file_bytes)
+        audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
         audio_transcription = whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]
         logger.info(f"Transcribed user message: {user_message}")

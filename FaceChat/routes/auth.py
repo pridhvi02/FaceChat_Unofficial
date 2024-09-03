@@ -115,8 +115,9 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
             raise HTTPException(status_code=500, detail="Error extracting voice vector")
 
         
-    
+    global image_embedding
     image_embedding= await image()
+    global voice_embedding
     voice_embedding=await voice()
    
     
@@ -219,13 +220,12 @@ chat = model.start_chat(
 user_states = {}
 
 @router.post("/register")
-async def register_user(request: Request, 
-    db: Session = Depends(get_db),
-    voice_file: UploadFile = File(...)):
+async def register_user(request: Request, db: Session = Depends(get_db),voice_file: UploadFile = File(...)):
     try:
         # Step 1: Process the audio file
         file_bytes = await voice_file.read()
-        audio_np, _ = librosa.load(io.BytesIO(file_bytes), sr=16000)
+        mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+        audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
         audio_transcription = whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]
         logger.info(f"Transcribed user message: {user_message}")
