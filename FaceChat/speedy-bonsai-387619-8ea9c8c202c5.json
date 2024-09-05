@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "speedy-bonsai-387619",
+  "private_key_id": "8ea9c8c202c5caaa55f0c024c41f9ea8db551703",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQDnJZR5FNNGQJec\nkg51YtsTTMmHkvbMpWK2CDg8hcsz0yL+2AL+kKN7ehD3g11t8rL0A2vqdHx8EqZV\n/EJhzEEB4v1qZbPhdw8zpq9vxVqiPLgr/b3CbGlUB6vHJuNryNh+oUqcgDIdkXgT\nrL96fie9Xm1UhNTix3eR5H9etoqExkrYdFW3kGAWlTubavsUAM3IGpnWyN7pOXtT\nfP70T3MnCJT8ldqJvCFRz8bvpk0iuepAMUDnLrAj6NTAyoVDxlof99T6HCYxdy4n\nr/piuAcMGs7/QuTOi0rMLzbMJe+sXk0tK8hV+dGeINJ4Aw59lF3tNnBe3wdSqd50\nCk1VNIbJAgMBAAECggEALph7he4OChEuzvP9gKnhLlKSJKeaY1YqoDXnekHhXOzg\n1t0+O0l2f0dz4KVlYerlKr3+1OhPCObsi5Ra4GKfryzuN3LRkG+jC588KeyvkNlr\nKgkQZf9bO0KBnReojDuUcvB6PTK1h5Lh0RuHjP6d7bV5liphzOZ3YtxcVcA4C7wY\nT8yz8vGeODQ5HqgyY1oIa46tUlsR8EBnisxP/sJ32o4S2dEqn4MEJkP+JZzz+Ino\navG40GTTO5vPeTviKg4jmg+jQpZQEgxKl8bilQzjAzlSecGx2M6KDs9yiX0hL631\n48Cv5/tmJTywx6U8/evCf/6L53h71aGAdqoJDbi9tQKBgQD6i16+Cor66uSfdRkX\n94KIEfUFs7wHA0UhkuPFvScYq/408wehAbH6UN71vzRhy4uFY7q1cgERTkj5bhxf\nvYYbUyDHDmnPoFVhi8XTPQp+Yq83XZZfh8iTfqFrN2OvCriC+2+FSSKaKFUzXABv\nOFrgy7MTOUTsL6x5+X7ldupWDQKBgQDsLhSG2Tv1d9WnQBwkmyaFbrNJwYuJdQGr\n9kRiKdTeUv0h65aJ70A1GGTxYf27CuASP5clqTkoQW9LmYldh/0yRgvJ5Y/wruEJ\nhAwEh9luosH1XkkeBNh9O1HTN49SAwfmtrYj8jSR26fwCtskkItpyY2ix4HjU9Vy\n7lgUlYHgrQKBgEb6EJ750aF/xcC+pZs6jQoLPESfRFcgQAdg25H7IgZFQ0Cw0Kp2\nFnt5SZCI2EgUJ7RkKlKYt2C1ssqmvPcKc+FtzU1W8fbVzxpRRHuxQTXIsyaWJrFt\ngA74wrXi/SRrfxXsMQ2rSFgvsONZ3u2jI2uniVWa1cGrR8tOOPq8k2pJAoGANT0J\n6X/McT/LDIF6FpJWs5tJlOWpA5o5fz7rGUmer2L7porJi1xAF/fgwTy6ilAgRFzL\nQHUN6lIduWfpvAisfYmmnKM/uBxjo9Z9MwRAch0EJcBUMQ0ck9YsUrVifDUsscgb\n9KxjR0HBcG2yCmL+2iDR6ZCZadn68oZhmno9JZ0CgYAVYVZjrKDlEkPIn6kWOJcM\nRvpIbmBljsZoDMrMsOk6V3nSMEUCKF406TgS1bOGeqbh4U2EcQ+xAeaI9YLRDZn7\nxXa7FNAfhybeyxaj6g6IUNKxYDAA7ueISdf2dAnV1gWqdceRongDHz6/bECUirHf\nCECScCILdLAEfuJrcGr8tw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "face-chat-app@speedy-bonsai-387619.iam.gserviceaccount.com",
+  "client_id": "112745957278910677860",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/face-chat-app%40speedy-bonsai-387619.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

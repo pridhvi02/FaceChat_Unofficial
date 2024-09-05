@@ -182,7 +182,7 @@ def context_extraction(db : Session,user_id: int,input_text: str):
 
     
 
-@router.post("/conversation")
+@router.post("/api/conversation")
 async def handle_conversation(request: Request,audio_file: UploadFile = File(...),db: Session = Depends(get_db)):
     
     # Extract user information from the request state
@@ -225,5 +225,5 @@ async def handle_conversation(request: Request,audio_file: UploadFile = File(...
     text_embeddings(db,user_id,user_message,generated_text)
 
     return {
-        "message": generated_text
+        "responseText": generated_text
     }

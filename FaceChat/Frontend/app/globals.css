@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.particlehead {
+  background: #000000;
+  width: 100vw;
+  height: 100vh;
+}
+
+h1 {
+  font-size: 31px;
+  color: #202022;
+  font-family: var(--font-montserrat);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  text-transform: uppercase;
+  font-weight: normal;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+h1 strong {
+  font-weight: 700;
+}
+
+h1 em {
+  font-family: var(--font-playfair);
+  text-transform: lowercase;
+  font-style: italic;
+}

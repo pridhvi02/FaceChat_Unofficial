@@ -84,7 +84,7 @@ def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
     mp3_io.seek(0)
     return mp3_io.read()
 
-@router.post('/verify')
+@router.post('/api/verify')
 async def verify_user(request: Request,face_image: UploadFile = File(...), voice_audio: UploadFile = File(...), db: Session = Depends(get_db)):
     #function to retrieve image embedding
     async def image():
@@ -143,10 +143,10 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
         #User Found and Getting response from Gemini
         verified_message=f"Welcome back {user_dict['name']}, what can i help you with today? "
         logger.info(f"Verification done and the verified message with name of the user is sent to frontend: {verified_message}")
-        return {"user_id": user_dict['user_id'], "message": verified_message}
+        return {'status': 'verified', "responseText": verified_message}
     else:
         logger.info("No matching user found")
-        return {'status': 'error', 'message':'You are new here please register'}
+        return {'status': 'error', 'responseText':'Seems like You are new here, please register with us , to continue.'}
     
 
 
@@ -219,7 +219,7 @@ chat = model.start_chat(
 # Track user state in a global dictionary (or use session/database)
 user_states = {}
 
-@router.post("/register")
+@router.post("/api/register")
 async def register_user(request: Request, db: Session = Depends(get_db),voice_file: UploadFile = File(...)):
     try:
         # Step 1: Process the audio file
@@ -260,13 +260,15 @@ async def register_user(request: Request, db: Session = Depends(get_db),voice_fi
                     logger.info(f"New User id {new_user.user_id} ")
                     request.session['user_id'] = new_user.user_id
                     request.session["registered_user_details"] = user_details
-                    return {"message": "User registered successfully", "user_id": new_user.user_id , "details":user_details}
+                    return {"status":"registered","responseText": f"OK {new_user.name}, you have registered successfully, so what can i do for you today"}
                     
                 except json.JSONDecodeError as e:
                     logger.error(f"Error decoding JSON: {e}")
                     raise HTTPException(status_code=500, detail=f"Error decoding JSON: {str(e)}")
             else:
                 logger.error("Unable to extract JSON from the LLM response.")
+        else :
+            return {"status":"processing","responseText": f"{response_text}"}
                 
     except StopCandidateException as e:
         logger.error(f"Model stopped due to safety concerns: {e}")

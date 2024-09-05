@@ -10,6 +10,7 @@ openai-whisper
 opencv-python-headless 
 langchain-google-vertexai
 langchain
+pydub
 Pillow 
 itsdangerous
 sentence-transformers
