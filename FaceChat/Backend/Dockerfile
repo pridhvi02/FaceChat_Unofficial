@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     libsndfile1 \ 
     libgl1-mesa-glx \
     libopencv-dev \
+    ffmpeg \ 
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 # Set the working directory in the container
@@ -31,3 +32,6 @@ EXPOSE 80
 
 # Run the application
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "80"]
+
+
+

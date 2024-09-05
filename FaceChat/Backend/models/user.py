@@ -11,8 +11,8 @@ class User(Base):
     age = Column(Integer, nullable=False)
     gender = Column(String(10), nullable=False)
     contact = Column(String(100), nullable=False)
-    face_image = Column(Vector(768), nullable=False)
-    voice_sample = Column(Vector(13), nullable=False)
+    face_image = Column(ARRAY(FLOAT), nullable=False)
+    voice_sample = Column(ARRAY(FLOAT), nullable=False)
     conversations =Column(MutableList.as_mutable(ARRAY(String)),nullable=True)
     conv_embedding = Column(MutableList.as_mutable(ARRAY(FLOAT,dimensions=2)), nullable=True)
 
