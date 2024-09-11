@@ -15,6 +15,8 @@ const Speak = ({ setText, resetFace }) => {
   const [recordedAudioBlob, setRecordedAudioBlob] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
+  const [isRegistration, setIsRegistration] = useState(false);
+
 
   const introText = "Welcome to project X. I'm your virtual assistant. How can I help you today?";
 
@@ -101,7 +103,11 @@ const captureImage = () => {
     recorderRef.current.onRecordingComplete = async (audioBlob) => {
       console.log('Recording complete, audio blob:', audioBlob);
       setRecordedAudioBlob(audioBlob);
-      await handleVerification(audioBlob, imageBlob);
+      if (isRegistration) {
+        await handleRegistration(audioBlob);
+      } else {
+        await handleVerification(audioBlob, imageBlob);
+      }
       // console.log(audioBlob, 'aud...');
       // console.log(imageBlob,'img...')
     };
@@ -154,6 +160,7 @@ const captureImage = () => {
             await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
         } else {
             await speakText(result.responseText);
+            setIsRegistration(true); 
             await handleRegistration(audioBlob);
         }
     } catch (error) {
