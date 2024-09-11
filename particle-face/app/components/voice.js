@@ -150,11 +150,11 @@ const captureImage = () => {
 
         if (result.status === 'verified') {
             setIsVerified(true);
+            await speakText(result.responseText);
             await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
-            await speakText(result.responseText);
         } else {
-            await handleRegistration(audioBlob);
             await speakText(result.responseText);
+            await handleRegistration(audioBlob);
         }
     } catch (error) {
         console.error('Error during verification:', error);
@@ -162,10 +162,16 @@ const captureImage = () => {
 };
   
   const sendToConversationEndpoint = async (audioBlob, responseText) => {
+    
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.wav')
     try {
-      const response = await fetch('/api/conversation', {
+      const response = await fetch('', {
         method: 'POST',
-        body: audioBlob
+        body: formData,
+        headers: {
+          'Accept': 'application/json'  // Ensure correct response content-type
+      }
       });
 
       if (!response.ok) {
@@ -180,10 +186,16 @@ const captureImage = () => {
   };
   
   const handleRegistration = async (audioBlob, responseText) => {
+    
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.wav')
     try {
-      const response = await fetch('/api/registration', {
+      const response = await fetch('', {
         method: 'POST',
-        body: audioBlob
+        body: formData,
+        headers: {
+          'Accept': 'application/json'  // Ensure correct response content-type
+      }
       });
 
       if (!response.ok) {
