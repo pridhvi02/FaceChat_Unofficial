@@ -72,7 +72,7 @@ const Speak = ({ setText, resetFace }) => {
     try {
       const imageBlob = await captureImage();
       setCapturedImage(imageBlob);
-      startRecording();
+      startRecording(imageBlob);
     } catch (error) {
       console.error('Error capturing image:', error);
       startRecording(); // Start recording even if image capture fails
@@ -80,23 +80,30 @@ const Speak = ({ setText, resetFace }) => {
   };
 
   // Start image capture
-  const captureImage = () => {
-    return new Promise((resolve, reject) => {
-      startImageCapture(0, (blob) => {
-        stopImageCapture();
-        resolve(blob);
-      }).catch(reject);
+const captureImage = () => {
+  return new Promise((resolve, reject) => {
+    startImageCapture((blob) => {
+      // Resolve with the blob and stop the image capture
+      stopImageCapture();
+      // console.log(blob, 'image...')
+      resolve(blob);
+    }).catch((error) => {
+      console.error('Error in startImageCapture:', error);
+      reject(error);
     });
-  };
+  });
+};
 
   // Start audio recording
-  const startRecording = () => {
+  const startRecording = (imageBlob) => {
     setIsRecording(true);
     recorderRef.current.startRecording();
     recorderRef.current.onRecordingComplete = async (audioBlob) => {
       console.log('Recording complete, audio blob:', audioBlob);
       setRecordedAudioBlob(audioBlob);
-      await handleVerification(audioBlob, capturedImage);
+      await handleVerification(audioBlob, imageBlob);
+      // console.log(audioBlob, 'aud...');
+      // console.log(imageBlob,'img...')
     };
   };
 
@@ -111,42 +118,60 @@ const Speak = ({ setText, resetFace }) => {
     setAppStarted(true);
   };
 
-  const handleVerification = async (audioBlob, capturedImage) => {
+  const handleVerification = async (audioBlob, imageBlob) => {
+    // console.log("Captured Image:", imageBlob); 
+    // console.log("Audio Blob:", audioBlob);
+    if (!audioBlob || !imageBlob) {
+        console.error("Missing audio or image for verification");
+        return;
+    }
+
     const formData = new FormData();
     // Append the image and audio blob to the FormData object
-    formData.append('image', capturedImage);
-    formData.append('audio', audioBlob);
+    formData.append('face_image', imageBlob, 'image.jpg');  // You can specify a file name here
+    formData.append('voice_audio', audioBlob, 'audio.wav');  // You can specify a file name here
+
     try {
-      // Send the recorded audio and image to the verification endpoint
-      const response = await fetch('http://localhost:80/auth/api/verify', {
-        method: 'POST',
-        body: formData
-      });
+        // Send the recorded audio and image to the verification endpoint
+        const response = await fetch('0.0.0.0:80/auth/api/verify', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'Accept': 'application/json'  // Ensure correct response content-type
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Verification failed');
+        }
   
-      if (!response.ok) {
-        throw new Error('Verification failed');
-      }
-  
-      const { status, responseText } = await response.json();
-  
-      // If the user is verified, proceed to the conversation endpoint
-      if (status === 'verified') {
-        setIsVerified(true);
-        await sendToConversationEndpoint(responseText);
-      } else {
-        // If the user is not verified, proceed to the registration endpoint
-        await handleRegistration(responseText);
-      }
+        const result = await response.json();  // Ensure you're reading the response as JSON
+        console.log('Verification response:', result);
+
+        if (result.status === 'verified') {
+            setIsVerified(true);
+            await speakText(result.responseText);
+            await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
+        } else {
+            await speakText(result.responseText);
+            await handleRegistration(audioBlob);
+        }
     } catch (error) {
-      console.error('Error during verification:', error);
+        console.error('Error during verification:', error);
     }
-  };
+};
   
   const sendToConversationEndpoint = async (audioBlob, responseText) => {
+    
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.wav')
     try {
-      const response = await fetch('http://localhost:80/conversation/api/conversation', {
+      const response = await fetch('0.0.0.0:80/conversation/api/conversation', {
         method: 'POST',
-        body: audioBlob
+        body: formData,
+        headers: {
+          'Accept': 'application/json'  // Ensure correct response content-type
+      }
       });
 
       if (!response.ok) {
@@ -161,10 +186,16 @@ const Speak = ({ setText, resetFace }) => {
   };
   
   const handleRegistration = async (audioBlob, responseText) => {
+    
+    const formData = new FormData();
+    formData.append('audio', audioBlob, 'audio.wav')
     try {
-      const response = await fetch('http://localhost:80/auth/api/register', {
+      const response = await fetch('0.0.0.0:80/auth/api/register', {
         method: 'POST',
-        body: audioBlob
+        body: formData,
+        headers: {
+          'Accept': 'application/json'  // Ensure correct response content-type
+      }
       });
 
       if (!response.ok) {
