@@ -15,6 +15,7 @@ const Speak = ({ setText, resetFace }) => {
   const [recordedAudioBlob, setRecordedAudioBlob] = useState(null);
   const [isVerified, setIsVerified] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
+  const [isRegistration, setIsRegistration] = useState(false);
 
   const introText = "Welcome to project X. I'm your virtual assistant. How can I help you today?";
 
@@ -101,7 +102,11 @@ const captureImage = () => {
     recorderRef.current.onRecordingComplete = async (audioBlob) => {
       console.log('Recording complete, audio blob:', audioBlob);
       setRecordedAudioBlob(audioBlob);
-      await handleVerification(audioBlob, imageBlob);
+      if (isRegistration) {
+        await handleRegistration(audioBlob);
+      } else {
+        await handleVerification(audioBlob, imageBlob);
+      }
       // console.log(audioBlob, 'aud...');
       // console.log(imageBlob,'img...')
     };
@@ -132,8 +137,11 @@ const captureImage = () => {
     formData.append('voice_audio', audioBlob, 'audio.wav');  // You can specify a file name here
 
     try {
+      console.log('before endpoint')
+      const url = 'http://localhost:80/auth/api/verify';
+      console.log(url,'thisurl.');
         // Send the recorded audio and image to the verification endpoint
-        const response = await fetch('0.0.0.0:80/auth/api/verify', {
+        const response = await fetch(url, {
             method: 'POST',
             body: formData,
             headers: {
@@ -154,6 +162,7 @@ const captureImage = () => {
             await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
         } else {
             await speakText(result.responseText);
+            setIsRegistration(true); 
             await handleRegistration(audioBlob);
         }
     } catch (error) {
@@ -164,9 +173,10 @@ const captureImage = () => {
   const sendToConversationEndpoint = async (audioBlob, responseText) => {
     
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.wav')
+    formData.append('voice_file', audioBlob, 'audio.wav')
     try {
-      const response = await fetch('0.0.0.0:80/conversation/api/conversation', {
+      const urll = 'http://localhost:80/conversation/api/conversation';
+      const response = await fetch(urll, {
         method: 'POST',
         body: formData,
         headers: {
@@ -179,7 +189,6 @@ const captureImage = () => {
       }
 
       await speakText(responseText);
-      setIsSpeak(true);  // Continue recording for further conversation
     } catch (error) {
       console.error('Error sending to conversation endpoint:', error);
     }
@@ -188,14 +197,13 @@ const captureImage = () => {
   const handleRegistration = async (audioBlob, responseText) => {
     
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'audio.wav')
+    formData.append('voice_file', audioBlob, 'audio.wav')
+    console.log('Audio Blob:', audioBlob);
+    console.log('FormData entries:', [...formData.entries()]);
     try {
-      const response = await fetch('0.0.0.0:80/auth/api/register', {
+      const response = await fetch('http://localhost:80/auth/api/register', {
         method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json'  // Ensure correct response content-type
-      }
+        body: formData
       });
 
       if (!response.ok) {
@@ -205,15 +213,15 @@ const captureImage = () => {
       const { status, responseText } = await response.json();
 
       // Convert the response text to speech and play it
-      await speakText(responseText);
+      
 
       if (status === 'registered') {
         // If registration is successful and the user is now verified, switch to the conversation endpoint
         setIsVerified(true);
-        setIsSpeak(true);
+        await speakText(responseText);
       } else {
         // Handle cases where the user still isn't verified
-        setIsSpeak(true);
+        await speakText(responseText);
       }
     } catch (error) {
       console.error('Error during registration:', error);
