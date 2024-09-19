@@ -1,10 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Request
 from sqlalchemy.orm import Session
+from scipy.spatial.distance import cosine
 import numpy as np
 import logging
 import librosa
 import json
 import re
+from sklearn.metrics.pairwise import cosine_distances
 import os
 import io
 from pydub import AudioSegment
@@ -33,49 +35,58 @@ image_embedding = np.array([[]])
 voice_embedding = np.array([[]])
 
 
-#Function for similarity search of voice and image embeddings
 def find_similar_embeddings(db: Session, img_embedding, vce_embedding):
-    similarity_threshold = 0.5
-    img_embedding=img_embedding.tolist()[0]
-    vce_embedding=vce_embedding.tolist()
+    similarity_threshold = 0.2
+    img_embedding = np.array(img_embedding).flatten()
+    vce_embedding = np.array(vce_embedding).flatten()
+
     try:
-        logger.info('Searching for Highest similarity among the users')
+        logger.info('Searching for the user with the highest similarity')
 
-        # Calculate similarities
-        image_similarity = User.face_image.cosine_distance(img_embedding)
-        voice_similarity = User.voice_sample.cosine_distance(vce_embedding)
-    
-        query = (
-            db.query(
-                User.user_id,  # Assuming the User model has 'id' and 'name' fields
-                User.name,
-                User.age,
-                User.gender,
-                User.contact,
-                image_similarity.label("image_similarity"),
-                voice_similarity.label("voice_similarity"),
-            )
-            .filter(image_similarity < similarity_threshold)
-            .filter(voice_similarity < similarity_threshold)
-            .order_by((image_similarity + voice_similarity).asc())
-            .limit(1)
-            .one_or_none()
-        )
+        # Load users from the database
+        users = db.query(
+            User.user_id,
+            User.name,
+            User.age,
+            User.gender,
+            User.contact,
+            User.face_image,
+            User.voice_sample
+        ).all()
 
-        if query:
-            matched_user_id = query.user_id
-            matched_user_name = query.name
-            matched_user_age=query.age
-            matched_user_gender=query.gender
-            matched_user_contact=query.contact
-            logger.info(f"Success,Found matching user{matched_user_id}")
-            return matched_user_id, matched_user_name,matched_user_age,matched_user_gender,matched_user_contact
+        best_match = None
+        best_similarity = float('inf')
+
+        for user in users:
+            # Convert user embeddings to numpy arrays
+            face_image_embedding = np.array(user.face_image).flatten()
+            voice_sample_embedding = np.array(user.voice_sample).flatten()
+
+            # Compute cosine similarities
+            image_similarity = cosine_distances([face_image_embedding], [img_embedding])[0][0]
+            voice_similarity = cosine_distances([voice_sample_embedding], [vce_embedding])[0][0]
+
+            total_similarity = image_similarity + voice_similarity
+
+            # Log the individual similarities for debugging
+            logger.info(f"User {user.user_id} - Image Similarity: {image_similarity}, Voice Similarity: {voice_similarity}, Total Similarity: {total_similarity}")
+
+            if total_similarity < best_similarity and image_similarity < similarity_threshold and voice_similarity < similarity_threshold:
+                best_similarity = total_similarity
+                best_match = user
+
+        if best_match:
+            logger.info(f"Match found: User ID {best_match.user_id} with total similarity {best_similarity}")
+            return (best_match.user_id, best_match.name, best_match.age, best_match.gender, best_match.contact)
         else:
-            logger.info("No Matching user with the provided embeddings")
+            logger.info("No user matched with the provided embeddings based on the threshold.")
             return 'No Match Found'
-    
+
     except Exception as e:
-        logger.error(f"Error in finding the similarity of embeddings{e}")
+        logger.error(f"Error in finding similarity of embeddings: {e}")
+        return 'Error'
+
+    
 
 def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
     audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
@@ -85,14 +96,14 @@ def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
     return mp3_io.read()
 
 @router.post('/api/verify')
-async def verify_user(request: Request, face_image: UploadFile = File(...), voice_audio: UploadFile = File(...), db: Session = Depends(get_db)):
+async def verify_user(request: Request,face_image: UploadFile = File(...), voice_audio: UploadFile = File(...), db: Session = Depends(get_db)):
     #function to retrieve image embedding
     async def image():
         logger.info("Received image file for verification")
         try:
-            image_bytes = await face_image.read()
-            face_object = FaceRecognition()
-            pic_embedding = face_object.recognize_face(io.BytesIO(image_bytes))
+            image_bytes=await face_image.read()
+            face_object= FaceRecognition()
+            pic_embedding= face_object.recognize_face(io.BytesIO(image_bytes))
             logger.info(f"Extracted Image vector successfully: {pic_embedding}")
             return pic_embedding
         
@@ -105,7 +116,8 @@ async def verify_user(request: Request, face_image: UploadFile = File(...), voic
         logger.info("Received voice file for verification")
         try:
             file_bytes = await voice_audio.read()
-            mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+            # mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+            mp3_file_bytes = file_bytes
             sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
             logger.info(f"Extracted voice vector: {sound_embedding}")
             return sound_embedding
@@ -224,7 +236,8 @@ async def register_user(request: Request, db: Session = Depends(get_db),voice_fi
     try:
         # Step 1: Process the audio file
         file_bytes = await voice_file.read()
-        mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+        # mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+        mp3_file_bytes = file_bytes
         audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
         audio_transcription = whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]

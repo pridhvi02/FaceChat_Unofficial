@@ -5,7 +5,7 @@ from pgvector.sqlalchemy import Vector
 from database import engine, SessionLocal
 
 class User(Base):
-    __tablename__ = 'users'
+    __tablename__ = 'usersdetails'
     user_id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     age = Column(Integer, nullable=False)
@@ -26,4 +26,3 @@ def get_db():
         db.close()
 
 Base.metadata.create_all(bind=engine)
-

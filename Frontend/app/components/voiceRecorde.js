@@ -6,7 +6,7 @@ export default class VoiceRecorder {
       this.analyser = null;
       this.silenceDetectionInterval = null;
       this.lastAudioDetectedTime = 0;
-      this.silenceThreshold = 0.12;
+      this.silenceThreshold = 0.01;
       this.silenceDuration = 2000; // 2 seconds
       this.audioChunks = [];
       this.onRecordingComplete = null;
