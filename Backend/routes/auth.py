@@ -116,8 +116,8 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
         logger.info("Received voice file for verification")
         try:
             file_bytes = await voice_audio.read()
-            # mp3_file_bytes = convert_webm_to_mp3(file_bytes)
-            mp3_file_bytes = file_bytes
+            mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+            # mp3_file_bytes = file_bytes
             sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
             logger.info(f"Extracted voice vector: {sound_embedding}")
             return sound_embedding

@@ -144,7 +144,7 @@ async def handle_conversation(request: Request, audio_file: UploadFile = File(..
 
     try:
         file_bytes = await audio_file.read()
-        mp3_file_bytes = file_bytes
+        mp3_file_bytes = convert_webm_to_mp3(file_bytes)
         audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
         audio_transcription = request.app.state.whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]
