@@ -16,6 +16,7 @@ const Speak = ({ setText, resetFace }) => {
   const [isVerified, setIsVerified] = useState(false);
   const [capturedImage, setCapturedImage] = useState(null);
   const [isRegistration, setIsRegistration] = useState(false);
+  const [isConversation,setIsConversation] = useState(false);
 
   const introText = "Welcome to project X. I'm your virtual assistant. How can I help you today?";
 
@@ -104,7 +105,9 @@ const captureImage = () => {
       setRecordedAudioBlob(audioBlob);
       if (isRegistration) {
         await handleRegistration(audioBlob);
-      } else {
+      // } else if (isConversation){
+      //   await sendToConversationEndpoint(audioBlob);
+      }else {
         await handleVerification(audioBlob, imageBlob);
       }
       // console.log(audioBlob, 'aud...');
@@ -143,6 +146,7 @@ const captureImage = () => {
         // Send the recorded audio and image to the verification endpoint
         const response = await fetch(url, {
             method: 'POST',
+            credentials: 'include', 
             body: formData,
             headers: {
                 'Accept': 'application/json'  // Ensure correct response content-type
@@ -158,8 +162,10 @@ const captureImage = () => {
 
         if (result.status === 'verified') {
             setIsVerified(true);
+            setIsConversation(true);
             await speakText(result.responseText);
             await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
+
         } else {
             await speakText(result.responseText);
             setIsRegistration(true); 
@@ -173,22 +179,26 @@ const captureImage = () => {
   const sendToConversationEndpoint = async (audioBlob, responseText) => {
     
     const formData = new FormData();
-    formData.append('voice_file', audioBlob, 'audio.wav')
+    formData.append('audio_file', audioBlob, 'audio.wav')
     try {
       const urll = 'http://localhost:8000/conversation/api/conversation';
       const response = await fetch(urll, {
         method: 'POST',
-        body: formData,
-        headers: {
-          'Accept': 'application/json'  // Ensure correct response content-type
-      }
+        credentials: 'include', 
+        body: formData
       });
 
       if (!response.ok) {
         throw new Error('Failed to send to conversation endpoint');
       }
 
+       const { responseText } = await response.json();
+
       await speakText(responseText);
+      await sendToConversationEndpoint(audioBlob);  
+      setIsRegistration(false);
+      // setIsConversation(true);
+      
     } catch (error) {
       console.error('Error sending to conversation endpoint:', error);
     }
@@ -203,6 +213,7 @@ const captureImage = () => {
     try {
       const response = await fetch('http://localhost:8000/auth/api/register', {
         method: 'POST',
+        credentials: 'include', 
         body: formData
       });
 
@@ -217,8 +228,10 @@ const captureImage = () => {
 
       if (status === 'registered') {
         // If registration is successful and the user is now verified, switch to the conversation endpoint
-        setIsVerified(true);
+        setIsConversation(true);
         await speakText(responseText);
+        await sendToConversationEndpoint(audioBlob);
+        
       } else {
         // Handle cases where the user still isn't verified
         await speakText(responseText);

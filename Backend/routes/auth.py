@@ -136,6 +136,8 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
     #Handling the result got from the similarity search
     search_result= find_similar_embeddings(db,image_embedding,voice_embedding)
     
+    # Clear previous session data before storing new user data
+    request.session.clear()
     
     #checking if the returned item is a tuple with userid and user name, if yes user_id and name is provided to the prompt
     if search_result and isinstance(search_result,tuple):                        
@@ -149,16 +151,18 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
         'contact': search_result[4]
         }       
         
-        request.session['user_id']=user_dict['user_id']
-        request.session['verified_user_details']= user_dict
+        # Store user_id and details in the session
+        request.session['user_id'] = user_dict['user_id']
+        request.session['verified_user_details'] = user_dict
 
-        #User Found and Getting response from Gemini
-        verified_message=f"Welcome back {user_dict['name']}, what can i help you with today? "
-        logger.info(f"Verification done and the verified message with name of the user is sent to frontend: {verified_message}")
-        return {'status': 'verified', "responseText": verified_message}
+        # Log to ensure session data is being set correctly
+        logger.info(f"Session after verification: {request.session}")
+
+        verified_message = f"Welcome back {user_dict['name']}, what can I help you with today?"
+        return {'status': 'verified', 'responseText': verified_message}
     else:
         logger.info("No matching user found")
-        return {'status': 'error', 'responseText':'Seems like You are new here, please register with us , to continue.'}
+        return {'status': 'error', 'responseText': 'Seems like You are new here, please register with us to continue.'}
     
 
 
@@ -236,8 +240,8 @@ async def register_user(request: Request, db: Session = Depends(get_db),voice_fi
     try:
         # Step 1: Process the audio file
         file_bytes = await voice_file.read()
-        # mp3_file_bytes = convert_webm_to_mp3(file_bytes)
-        mp3_file_bytes = file_bytes
+        mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+        # mp3_file_bytes = file_bytes
         audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
         audio_transcription = whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]
@@ -273,6 +277,7 @@ async def register_user(request: Request, db: Session = Depends(get_db),voice_fi
                     logger.info(f"New User id {new_user.user_id} ")
                     request.session['user_id'] = new_user.user_id
                     request.session["registered_user_details"] = user_details
+                    logger.info(f"Session after verification: {request.session}")
                     return {"status":"registered","responseText": f"OK {new_user.name}, you have registered successfully, so what can i do for you today"}
                     
                 except json.JSONDecodeError as e:
