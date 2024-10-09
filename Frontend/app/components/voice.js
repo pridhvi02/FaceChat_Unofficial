@@ -105,8 +105,8 @@ const captureImage = () => {
       setRecordedAudioBlob(audioBlob);
       if (isRegistration) {
         await handleRegistration(audioBlob);
-      // } else if (isConversation){
-      //   await sendToConversationEndpoint(audioBlob);
+      } else if (isConversation){
+        await sendToConversationEndpoint(audioBlob);
       }else {
         await handleVerification(audioBlob, imageBlob);
       }
@@ -161,9 +161,10 @@ const captureImage = () => {
         console.log('Verification response:', result);
 
         if (result.status === 'verified') {
+          await speakText(result.responseText);
             setIsVerified(true);
             setIsConversation(true);
-            await speakText(result.responseText);
+            
             await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
 
         } else {
@@ -195,9 +196,9 @@ const captureImage = () => {
        const { responseText } = await response.json();
 
       await speakText(responseText);
-      await sendToConversationEndpoint(audioBlob);  
+      // await sendToConversationEndpoint(audioBlob);  
       setIsRegistration(false);
-      // setIsConversation(true);
+      setIsConversation(true);
       
     } catch (error) {
       console.error('Error sending to conversation endpoint:', error);

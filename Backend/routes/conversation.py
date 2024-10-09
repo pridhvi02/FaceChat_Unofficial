@@ -31,7 +31,7 @@ User query: {user_input}
 Assistant:
 """
 
-system_template = "You are a helpful assistant. Your task is to respond to the users queries based on the information you have , use the information you have about the{user_data} , {last_5_chats} ,  {similar_conv}. Don't include emojis in the response."
+system_template = "You are a helpful assistant. Your task is to respond to the users queries based on the information you have , Don't include emojis in the response."
 
 # Set up the prompt template
 prompt_template = ChatPromptTemplate(
@@ -144,7 +144,8 @@ async def handle_conversation(request: Request, audio_file: UploadFile = File(..
 
     try:
         file_bytes = await audio_file.read()
-        mp3_file_bytes = file_bytes
+        mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+        # mp3_file_bytes = file_bytes
         audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
         audio_transcription = request.app.state.whisper_model.transcribe(audio_np)
         user_message = audio_transcription["text"]
