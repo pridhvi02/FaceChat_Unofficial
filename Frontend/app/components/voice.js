@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect } from 'react';
 import VoiceRecorder from './voiceRecorde';
 import { startImageCapture, stopImageCapture } from './imageCapture';
+import { toast } from '@/hooks/use-toast';
 
 const Speak = ({ setText, resetFace }) => {
   // const textAreaRef = useRef(null);
@@ -17,8 +18,22 @@ const Speak = ({ setText, resetFace }) => {
   const [capturedImage, setCapturedImage] = useState(null);
   const [isRegistration, setIsRegistration] = useState(false);
   const [isConversation,setIsConversation] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [toastMessage, setToastMessage] = useState(false);
+
+  const showToast = () => {
+    toast({
+      description: "hello world",
+    })
+    setToastMessage(true);
+  };
+
+  const hideToast = () => {
+    setToastMessage(false);
+  };
 
   const introText = "Welcome to project X. I'm your virtual assistant. How can I help you today?";
+  const conformationMessage = "say the message shown in the screen to verify your audio!"
 
   // Initialize audio and recorder when the component mounts
   useEffect(() => {
@@ -73,11 +88,18 @@ const Speak = ({ setText, resetFace }) => {
   const captureImageAndStartRecording = async () => {
     try {
       const imageBlob = await captureImage();
-      setCapturedImage(imageBlob);
-      startRecording(imageBlob);
+      // Speak the confirmation message and wait for it to finish before starting recording
+      await playVerfy();
+      if (imageBlob) {
+        startRecording(imageBlob); // Pass imageBlob to startRecording
+      } else {
+        console.error("Image Blob is missing!");
+      }
     } catch (error) {
       console.error('Error capturing image:', error);
-      startRecording(); // Start recording even if image capture fails
+      // Start recording even if image capture fails, but wait for speech to finish first
+      await playVerfy();
+      startRecording();
     }
   };
 
@@ -98,9 +120,11 @@ const captureImage = () => {
 
   // Start audio recording
   const startRecording = (imageBlob) => {
+    console.log("Image Blob passed to startRecording:", imageBlob);
     setIsRecording(true);
     recorderRef.current.startRecording();
     recorderRef.current.onRecordingComplete = async (audioBlob) => {
+      hideToast();
       console.log('Recording complete, audio blob:', audioBlob);
       setRecordedAudioBlob(audioBlob);
       if (isRegistration) {
@@ -108,6 +132,7 @@ const captureImage = () => {
       } else if (isConversation){
         await sendToConversationEndpoint(audioBlob);
       }else {
+        console.log("Verifying with Audio and Image:", audioBlob, imageBlob)
         await handleVerification(audioBlob, imageBlob);
       }
       // console.log(audioBlob, 'aud...');
@@ -288,24 +313,27 @@ const captureImage = () => {
     }
   };
 
-  // Synthesize and play speech
-  const speakText = async (text) => {
-    // const text = textAreaRef.current.value;
-    if (text) {
+    // Play the verification audio
+    const playVerfy = async () => {
+      if (isVerifying) return; // Prevent multiple triggers
+
+      showToast();
+      setIsVerifying(true);
       setIsLoading(true);
       try {
         const response = await fetch('/api/syn', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
+          body: JSON.stringify({ text: conformationMessage })
         });
         if (!response.ok) {
-          throw new Error('Failed to synthesize speech');
+          throw new Error('Failed to synthesize intro speech');
         }
         const { speechMarks, audioContent } = await response.json();
         const audioBlob = new Blob([Buffer.from(audioContent, 'base64')], { type: 'audio/mpeg' });
         const audioUrl = URL.createObjectURL(audioBlob);
         audioRef.current.src = audioUrl;
+        return new Promise((resolve, reject) => {
         audioRef.current.play();
         let currentMark = 0;
         audioRef.current.ontimeupdate = () => {
@@ -321,13 +349,78 @@ const captureImage = () => {
           }
         };
         audioRef.current.onended = () => {
-          setIsLoading(false);
           setText('');
-          setIsSpeak(true);
+          setIsVerifying(false);
+          resolve(); 
           setTimeout(() => {
             resetFace();
           }, 300);
         };
+        audioRef.current.onerror = (err) => {
+          resetFace();
+          reject(err);  // Reject the promise if there is an error
+        };
+      });
+      } catch (error) {
+        console.error('Error playing intro:', error);
+        setIsVerifying(false);
+        resetFace();
+        reject(err);
+      }
+    };
+
+  // Synthesize and play speech
+  const speakText = async (text) => {
+    if (text) {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/syn', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
+        });
+        if (!response.ok) {
+          throw new Error('Failed to synthesize speech');
+        }
+        const { speechMarks, audioContent } = await response.json();
+        const audioBlob = new Blob([Buffer.from(audioContent, 'base64')], { type: 'audio/mpeg' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        audioRef.current.src = audioUrl;
+  
+        // Return a promise that resolves only after the audio has finished playing
+        return new Promise((resolve, reject) => {
+          audioRef.current.play();
+  
+          let currentMark = 0;
+          audioRef.current.ontimeupdate = () => {
+            while (currentMark < speechMarks.length &&
+                   audioRef.current.currentTime * 1000 >= speechMarks[currentMark].time) {
+              const mark = speechMarks[currentMark];
+              if (mark.type === 'viseme') {
+                setText(mark.value); // Update text with viseme value
+              } else if (mark.type === 'word') {
+                console.log('Word:', mark.value);
+              }
+              currentMark++;
+            }
+          };
+          audioRef.current.onended = () => {
+            setIsLoading(false);
+            setText('');
+            setIsSpeak(true);
+            resolve();
+            setTimeout(() => {
+              resetFace();
+            }, 300); // Resolve the promise when the audio ends
+          };
+  
+          audioRef.current.onerror = (err) => {
+            setIsLoading(false);
+            setIsSpeak(false);
+            resetFace();
+            reject(err);  // Reject the promise if there is an error
+          };
+        });
       } catch (error) {
         console.error('Error:', error);
         setIsLoading(false);
@@ -335,15 +428,20 @@ const captureImage = () => {
         resetFace();
       }
     }
-  };
+  };  
 
   if (!appStarted) {
     return (
-      <div>
-        <button className='text-white' onClick={startApp}>
+      <div className={`relative w-full flex items-center justify-center top-3`}>
+      {!appStarted && (
+        <button
+          className="text-white border px-4 py-2 rounded-lg z-10 relative"
+          onClick={startApp}
+        >
           Start Application
         </button>
-      </div>
+      )}
+    </div>
     );
   }
 
