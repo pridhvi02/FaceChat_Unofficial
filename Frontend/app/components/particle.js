@@ -309,7 +309,7 @@ function ParticleModel({ url, scale, particleSize, text, animationSpeed = 1, res
         enableDamping 
         dampingFactor={0.25} 
         rotateSpeed={0.5}
-        minDistance={maxDimension * 5}
+        minDistance={maxDimension * 6}
         maxDistance={maxDimension * 8}
         target={center}
       />

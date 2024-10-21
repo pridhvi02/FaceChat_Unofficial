@@ -6,7 +6,7 @@ import ParticleModel from './components/particle';
 import Speak from './components/voice';
 import { useState, useRef } from "react";
 import Background from './components/background';
-import { CaptureButton } from './components/imageCapture';
+// import { CaptureButton } from './components/imageCapture';
 
 const HomePage = () => {
   const [text, setText] = useState('');
@@ -14,9 +14,9 @@ const HomePage = () => {
 
   return (
     <>
-      <div className='bg-customGreen'>
+      <div className={`bg-[url('https://img.freepik.com/free-vector/blue-sparkling-shiny-bokeh-background-design_1017-36398.jpg')] bg-cover bg-center`}>
       <Speak setText={setText} resetFace={() => resetFaceRef.current && resetFaceRef.current()}/>
-      <Background color="#21946a"/>
+      <Background color="#be22d6"/>
       <Canvas
       gl={{
       powerPreference: "high-performance",
@@ -36,7 +36,7 @@ const HomePage = () => {
         transform: 'translateX(-50%)',
         zIndex: 1000
       }}>
-        <CaptureButton captureInterval={5000} />
+        {/* <CaptureButton captureInterval={5000} /> */}
       </div>
     </>
   );
