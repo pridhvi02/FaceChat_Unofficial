@@ -12,6 +12,9 @@ module.exports = {
   			'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
   			'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))'
   		},
+		boxShadow: {
+			glow: '0 0 10px rgba(255, 255, 255, 0.8)',
+		},	
   		colors: {
   			customGreen: '#043635',
   			background: 'hsl(var(--background))',
@@ -61,6 +64,11 @@ module.exports = {
   			sm: 'calc(var(--radius) - 4px)'
   		}
   	}
+  },
+  variants: {
+    extend: {
+      boxShadow: ['hover'],
+    },
   },
   plugins: [require("tailwindcss-animate")],
 };

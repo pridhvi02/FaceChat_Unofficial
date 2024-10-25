@@ -36,7 +36,7 @@ voice_embedding = np.array([[]])
 
 
 def find_similar_embeddings(db: Session, img_embedding, vce_embedding):
-    similarity_threshold = 0.2
+    similarity_threshold = 0.5
     img_embedding = np.array(img_embedding).flatten()
     vce_embedding = np.array(vce_embedding).flatten()
 
@@ -90,10 +90,10 @@ def find_similar_embeddings(db: Session, img_embedding, vce_embedding):
 
 def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
     audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
-    mp3_io = io.BytesIO()
-    audio.export(mp3_io, format="mp3")
-    mp3_io.seek(0)
-    return mp3_io.read()
+    wave = io.BytesIO()
+    audio.export(wave, format="wav")
+    wave.seek(0)
+    return wave.read()
 
 @router.post('/api/verify')
 async def verify_user(request: Request,face_image: UploadFile = File(...), voice_audio: UploadFile = File(...), db: Session = Depends(get_db)):
@@ -117,10 +117,31 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
         try:
             file_bytes = await voice_audio.read()
             mp3_file_bytes = convert_webm_to_mp3(file_bytes) 
-            # mp3_file_bytes = file_bytes
-            sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
-            logger.info(f"Extracted voice vector: {sound_embedding}")
-            return sound_embedding
+            audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
+            audio_transcription = whisper_model.transcribe(audio_np)
+            user_message = audio_transcription["text"]
+            logger.info(f"Transcribed user message: {user_message}")
+
+            # Define the pass phrase and convert to lowercase
+            pass_phrase = "hello world"
+            pass_phrase_words = pass_phrase.lower().split()  # Split and convert to lowercase
+            user_message_words = user_message.lower().split()  # Split and convert to lowercase
+
+            # Check if at least half of the words in the pass phrase are in the user message
+            required_correct_count = len(pass_phrase_words) / 2  # Half of the words in the pass phrase
+            correct_word_count = sum(word in user_message_words for word in pass_phrase_words)
+
+            # Check if the user message contains at least half of the words from the pass phrase
+            if correct_word_count >= required_correct_count:
+                logger.info("User  response is sufficiently correct.")
+                # Proceed with further processing
+                sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
+                logger.info(f"Extracted voice vector: {sound_embedding}")
+                return sound_embedding
+            else:
+                logger.info("User  response does not meet the required criteria.")
+                # Handle the case where the response is insufficient
+                return None  # Or any other appropriate response
 
         except Exception as e:
             logger.error(f"Error extracting voice vector: {e}")
@@ -131,6 +152,10 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
     image_embedding= await image()
     global voice_embedding
     voice_embedding=await voice()
+
+    logger.info(f"Image Embedding: {type(image_embedding)} Shape: {image_embedding.shape}")
+    logger.info(f"Voice Embedding: {type(voice_embedding)} Shape: {voice_embedding.shape}")
+
    
     
     #Handling the result got from the similarity search
@@ -207,7 +232,7 @@ instruction = (
     }
     ```
 
-    you should say 'completed' as a stop sequence after confirming the information with the user. Avoid including emojis or additional text in the JSON response.
+    you should say 'completed' as a stop sequence along with json after confirming the information with the user. Avoid including emojis or additional text in the JSON response.
     """
 )
 
@@ -269,7 +294,7 @@ async def register_user(request: Request, db: Session = Depends(get_db),voice_fi
                         age=user_details["age"],
                         gender=user_details["gender"],
                         contact=user_details["contact"],
-                        face_image=image_embedding.tolist()[0],
+                        face_image=image_embedding.tolist(),
                         voice_sample=voice_embedding.tolist(),  # Ensure correct key names
                     )
                     db.add(new_user)

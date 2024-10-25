@@ -75,10 +75,10 @@ def update_user_conversations(db: Session, user_id: int, new_conversations: str,
 
 def convert_webm_to_mp3(file_bytes: bytes) -> bytes:
     audio = AudioSegment.from_file(io.BytesIO(file_bytes), format="webm")
-    mp3_io = io.BytesIO()
-    audio.export(mp3_io, format="mp3")
-    mp3_io.seek(0)
-    return mp3_io.read()
+    wave = io.BytesIO()
+    audio.export(wave, format="wav")
+    wave.seek(0)
+    return wave.read()
 
 def text_embeddings( request:Request, db: Session, user_id: int, user_response: str, llm_response: str):    
     try:
