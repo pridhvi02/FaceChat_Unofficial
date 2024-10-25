@@ -435,7 +435,7 @@ const captureImage = () => {
       <div className={`relative w-full flex items-center justify-center top-3`}>
       {!appStarted && (
         <button
-          className="text-white border px-4 py-2 rounded-lg z-10 relative"
+          className="font-mono text-white border px-4 py-2 rounded-lg z-10 relative "
           onClick={startApp}
         >
           Start Application
