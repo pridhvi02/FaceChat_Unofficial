@@ -186,10 +186,8 @@ const captureImage = () => {
         console.log('Verification response:', result);
 
         if (result.status === 'verified') {
-          await speakText(result.responseText);
-            setIsVerified(true);
+            await speakText(result.responseText);
             setIsConversation(true);
-            
             await sendToConversationEndpoint(audioBlob);  // You may need to modify this for correct audio data
 
         } else {
@@ -254,8 +252,9 @@ const captureImage = () => {
 
       if (status === 'registered') {
         // If registration is successful and the user is now verified, switch to the conversation endpoint
-        setIsConversation(true);
         await speakText(responseText);
+        setIsConversation(true);
+        isRegistration(false);
         await sendToConversationEndpoint(audioBlob);
         
       } else {
@@ -435,7 +434,7 @@ const captureImage = () => {
       <div className={`relative w-full flex items-center justify-center top-3`}>
       {!appStarted && (
         <button
-          className="text-white border px-4 py-2 rounded-lg z-10 relative"
+          className="text-white border px-4 py-2 rounded-lg z-10 relative font-sans hover:shadow-glow"
           onClick={startApp}
         >
           Start Application
