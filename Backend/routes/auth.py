@@ -111,37 +111,16 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
             logger.error(f"Error in extracting the image embedding or similarity search in DB {e}")
             raise
     
-    #function to retrieve voice embedding
+            #function to retrieve voice embedding
     async def voice():
         logger.info("Received voice file for verification")
         try:
             file_bytes = await voice_audio.read()
-            mp3_file_bytes = convert_webm_to_mp3(file_bytes) 
-            audio_np, _ = librosa.load(io.BytesIO(mp3_file_bytes), sr=16000)
-            audio_transcription = whisper_model.transcribe(audio_np)
-            user_message = audio_transcription["text"]
-            logger.info(f"Transcribed user message: {user_message}")
-
-            # Define the pass phrase and convert to lowercase
-            pass_phrase = "hello world"
-            pass_phrase_words = pass_phrase.lower().split()  # Split and convert to lowercase
-            user_message_words = user_message.lower().split()  # Split and convert to lowercase
-
-            # Check if at least half of the words in the pass phrase are in the user message
-            required_correct_count = len(pass_phrase_words) / 2  # Half of the words in the pass phrase
-            correct_word_count = sum(word in user_message_words for word in pass_phrase_words)
-
-            # Check if the user message contains at least half of the words from the pass phrase
-            if correct_word_count >= required_correct_count:
-                logger.info("User  response is sufficiently correct.")
-                # Proceed with further processing
-                sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
-                logger.info(f"Extracted voice vector: {sound_embedding}")
-                return sound_embedding
-            else:
-                logger.info("User  response does not meet the required criteria.")
-                # Handle the case where the response is insufficient
-                return None  # Or any other appropriate response
+            mp3_file_bytes = convert_webm_to_mp3(file_bytes)
+            # mp3_file_bytes = file_bytes
+            sound_embedding = extract_voice_features(io.BytesIO(mp3_file_bytes))
+            logger.info(f"Extracted voice vector: {sound_embedding}")
+            return sound_embedding
 
         except Exception as e:
             logger.error(f"Error extracting voice vector: {e}")
@@ -193,8 +172,6 @@ async def verify_user(request: Request,face_image: UploadFile = File(...), voice
 
                                                             #END OF VERIFY ENDPOINT
 #-------------------------------------------------------------------------------------------------------------------------------------------------------#
-
-
 
 
 
